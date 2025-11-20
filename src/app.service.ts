@@ -6,7 +6,7 @@ export class AppService {
     return 'Hello World!';
   }
 
-  getId(id: number): string {
+  getId(id: string): string {
     return `id: ${id}`;
   }
 
@@ -16,7 +16,7 @@ export class AppService {
     return `Login: ${object.login}, Nazwa: ${object.name}`;
   }
 
-  getUserInfoAndId(id: number, data: object): string {
+  getUserInfoAndId(id: string, data: object): string {
     const object = data as { login: string; name: string };
 
     return `Id: ${id}, Login: ${object.login}, Nazwa: ${object.name}`;

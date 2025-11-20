@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { AppService } from './app.service';
-
-@Controller()
+@Controller('user')
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
@@ -11,7 +10,7 @@ export class AppController {
   }
 
   @Get(':id')
-  getId(@Param('id', ParseIntPipe) id: number): string {
+  getId(@Param('id') id: string): string {
     return this.appService.getId(id);
   }
 
@@ -21,7 +20,7 @@ export class AppController {
   }
 
   @Patch(':id')
-  getUserInfoAndId(@Param('id', ParseIntPipe) id: number, @Body() data: object){
+  getUserInfoAndId(@Param('id') id: string, @Body() data: object){
     return this.appService.getUserInfoAndId(id, data)
   }
 }
