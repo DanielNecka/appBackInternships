@@ -3,4 +3,6 @@ export class Car{
     brand: string;
     model: string;
     price: number;
+    maxPrice?: number;
+    minPrice?: number;
 }

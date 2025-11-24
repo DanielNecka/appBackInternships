@@ -8,7 +8,7 @@ export class CarController {
   constructor(private readonly carService: CarService) {}
 
   @Get()
-  findAllCars(): Promise<Car[]>{
+  findAllCars(): Promise<Car[] | string>{
     return this.carService.findAllCars();
   }
 
@@ -19,7 +19,7 @@ export class CarController {
 
   @Post('search')
   searchCars(@Body() carData: Car): Promise<Car[] | string> {
-    return this.carService.searchCars(carData);
+    return this.carService.searchCars(carData, 'ASC');
   }
 
   @Delete(':id')

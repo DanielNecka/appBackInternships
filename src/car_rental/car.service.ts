@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, Repository } from 'typeorm';
+import { FindOptionsWhere, ILike, LessThan, MoreThan, Repository } from 'typeorm';
 import { Cars } from 'src/entity/cars.entity';
 import { Car } from '../models/car.model';
 
@@ -11,8 +11,10 @@ export class CarService {
     private carsRepository: Repository<Cars>
   ) {}
 
-  findAllCars(): Promise<Car[]> {
-    return this.carsRepository.find();
+  async findAllCars(): Promise<Car[] | string> {
+    const cars = await this.carsRepository.find();
+
+    return cars.length ? cars : 'Brak samochodów';
   }
 
   async findCarById(id: number): Promise<Car | string> {
@@ -21,7 +23,7 @@ export class CarService {
     return car ? car : `Samochód o id: ${id} nie istnieje`;
   }
 
-  async searchCars(carData: Car): Promise<Car[] | string> {
+  async searchCars(carData: Car, sortType: 'ASC' | 'DESC'): Promise<Car[] | string> {
     const where: FindOptionsWhere<Car> = {};
 
     carData.brand 
@@ -29,9 +31,18 @@ export class CarService {
     carData.model 
       ? where.model = ILike(`%${carData.model}%`) : null;
     carData.price 
-        ? where.price = carData.price : null;
+      ? where.price = carData.price : null;
+    carData.maxPrice 
+      ? where.price = LessThan(carData.maxPrice) : null;
+    carData.minPrice 
+      ? where.price = MoreThan(carData.minPrice) : null;
 
-    const cars = await this.carsRepository.find({ where });
+    const cars = await this.carsRepository.find({ 
+      where,
+      order: {
+        price: sortType
+      } 
+    });
 
     return cars.length 
       ? cars : 'Nie znaleziono samochodu o danych wymaganiach';
