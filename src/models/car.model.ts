@@ -1,8 +1,6 @@
-export class Car{
+export interface Car{
     id?: number;
     brand: string;
     model: string;
     price: number;
-    maxPrice?: number;
-    minPrice?: number;
 }

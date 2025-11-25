@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, ILike, LessThan, MoreThan, Repository } from 'typeorm';
+import { Between, FindOptionsWhere, ILike, LessThan, MoreThan, Repository } from 'typeorm';
 import { Cars } from 'src/entity/cars.entity';
 import { Car } from '../models/car.model';
+import { CarSearch } from '../models/carSearch.model';
+import { max } from 'rxjs';
 
 @Injectable()
 export class CarService {
@@ -23,8 +25,8 @@ export class CarService {
     return car ? car : `Samochód o id: ${id} nie istnieje`;
   }
 
-  async searchCars(carData: Car, sortType: 'ASC' | 'DESC'): Promise<Car[] | string> {
-    const where: FindOptionsWhere<Car> = {};
+  async searchCars(carData: CarSearch, sortType: 'ASC' | 'DESC'): Promise<Car[] | string> {
+    const where: FindOptionsWhere<CarSearch> = {};
 
     carData.brand 
       ? where.brand = ILike(`%${carData.brand}%`) : null;
@@ -36,6 +38,8 @@ export class CarService {
       ? where.price = LessThan(carData.maxPrice) : null;
     carData.minPrice 
       ? where.price = MoreThan(carData.minPrice) : null;
+    carData.minPrice && carData.maxPrice
+      ? where.price = Between(carData.minPrice, carData.maxPrice) : null;
 
     const cars = await this.carsRepository.find({ 
       where,

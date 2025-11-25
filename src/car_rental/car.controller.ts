@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { CarService } from './car.service';
-import { Car } from '../models/car.model';
-import { PostgresDriver } from 'typeorm/browser/driver/postgres/PostgresDriver.js';
+import type { Car } from '../models/car.model';
+import type { CarSearch } from '../models/carSearch.model';
 
 @Controller('car')
 export class CarController {
@@ -18,7 +18,7 @@ export class CarController {
   }
 
   @Post('search')
-  searchCars(@Body() carData: Car): Promise<Car[] | string> {
+  searchCars(@Body() carData: CarSearch): Promise<Car[] | string> {
     return this.carService.searchCars(carData, 'ASC');
   }
 
