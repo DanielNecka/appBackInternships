@@ -14,7 +14,7 @@ export class CarService {
   ) {}
 
   async findAllCars(): Promise<Car[] | string> {
-    const cars = await this.carsRepository.find();
+  const cars = await this.carsRepository.find({ order: { id: 'DESC' },});
 
     return cars.length ? cars : 'Brak samochodów';
   }
