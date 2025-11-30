@@ -13,4 +13,13 @@ export class Cars {
 
   @Column()
   price: number;
+
+  @Column({ name: 'imgScr', nullable: true })
+  image?: string;
+
+  @Column({ nullable: true })
+  isRented?: boolean;
+
+  @Column({ nullable: true })
+  fuelType?: string;
 }

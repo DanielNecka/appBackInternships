@@ -3,8 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, ILike, LessThan, MoreThan, Repository } from 'typeorm';
 import { Cars } from 'src/entity/cars.entity';
 import { Car } from '../models/car.model';
+import { ApiError } from '../models/error.model';
 import { CarSearch } from '../models/carSearch.model';
-import { max } from 'rxjs';
 
 @Injectable()
 export class CarService {
@@ -13,20 +13,21 @@ export class CarService {
     private carsRepository: Repository<Cars>
   ) {}
 
-  async findAllCars(): Promise<Car[] | string> {
-  const cars = await this.carsRepository.find({ order: { id: 'DESC' },});
+  async findAllCars(): Promise<Car[] | ApiError> {
+    const cars = await this.carsRepository.find({ order: { id: 'DESC' },});
+    const mappedCars = cars.map((car) => this.mapEntityToCar(car));
 
-    return cars.length ? cars : 'Brak samochodów';
+    return mappedCars.length ? mappedCars : { msg: 'Błąd pobrania samochodów' };
   }
 
-  async findCarById(id: number): Promise<Car | string> {
+  async findCarById(id: number): Promise<Car | ApiError> {
     const car = await this.carsRepository.findOneBy({ id });
 
-    return car ? car : `Samochód o id: ${id} nie istnieje`;
+    return car ? this.mapEntityToCar(car) : { msg: `Błąd pobrania samochodu o id: ${id}` };
   }
 
-  async searchCars(carData: CarSearch, sortType: 'ASC' | 'DESC'): Promise<Car[] | string> {
-    const where: FindOptionsWhere<CarSearch> = {};
+  async searchCars(carData: CarSearch, sortType: 'ASC' | 'DESC'): Promise<Car[] | ApiError> {
+    const where: FindOptionsWhere<Cars> = {};
 
     carData.brand 
       ? where.brand = ILike(`%${carData.brand}%`) : null;
@@ -40,6 +41,8 @@ export class CarService {
       ? where.price = MoreThan(carData.minPrice) : null;
     carData.minPrice && carData.maxPrice
       ? where.price = Between(carData.minPrice, carData.maxPrice) : null;
+    carData.isRedted
+      ? (where.isRented = true) : null;
 
     const cars = await this.carsRepository.find({ 
       where,
@@ -48,8 +51,10 @@ export class CarService {
       } 
     });
 
-    return cars.length 
-      ? cars : 'Nie znaleziono samochodu o danych wymaganiach';
+    const mappedCars = cars.map((car) => this.mapEntityToCar(car));
+
+    return mappedCars.length 
+      ? mappedCars : { msg: 'Nie znaleziono samochodu o danych kryteriach'};
   }
 
   async deleteCarById(id: number): Promise<string> {
@@ -60,29 +65,73 @@ export class CarService {
       : `Samochód o id ${id} nie istnieje`
   }
 
-  async addCar(carData: Car): Promise<string | object> {
-    const savedCar = await this.carsRepository.save(carData);
+  async addCar(carData: Car): Promise<ApiError | { msg: string; addedCar: Car }> {
+    const savedCar = await this.carsRepository.save({
+      brand: carData.brand,
+      model: carData.model,
+      price: carData.price,
+      image: carData.image,
+      isRented: carData.isRented,
+      fuelType: carData.fuelType,
+    });
 
     return savedCar 
-      ? { message: `Pomyślnie dodano samochód ${savedCar.brand} ${savedCar.model} z ceną ${savedCar.price} zł/h.`, addedCar: savedCar} 
-      : `Błąd dodania samochodu ${carData.brand}, ${carData.model}`; 
+      ? { msg: `Pomyślnie dodano samochód ${savedCar.brand} ${savedCar.model} z ceną ${savedCar.price} zł/h.`, addedCar: this.mapEntityToCar(savedCar)} 
+      : { msg: `Błąd dodania samochodu ${carData.brand}, ${carData.model}`}; 
   }
 
-  async updateCarData(id: number, carData: Car): Promise<string> {
+  async updateCarData(id: number, carData: Car): Promise<ApiError> {
     const currentCar = await this.findCarById(id);
 
-    if (typeof currentCar === 'string') {
-      return currentCar;
+    if ('msg' in currentCar) {
+      return { msg: currentCar.msg };
     }
 
     const result = await this.carsRepository.update(id, {
       brand: carData.brand,
       model: carData.model,
       price: carData.price,
+      fuelType: carData.fuelType,
     });
 
     return result.affected
-      ? `Pomyślnie zaktualizowano samochód o id: ${id}\n\nStare dane: \nmarka: ${currentCar.brand} \nmodel: ${currentCar.model} \ncena: ${currentCar.price}\n\nNowe dane: \nmarka: ${carData.brand} \nmodel: ${carData.model} \ncena: ${carData.price}`
-      : `Nie udało się zaktualizować samochodu o id: ${id}`;
+      ? { msg : `Pomyślnie zaktualizowano samochód o id: ${id}\n\nStare dane: \nmarka: ${currentCar.brand} \nmodel: ${currentCar.model} \ncena: ${currentCar.price}\n\nNowe dane: \nmarka: ${carData.brand} \nmodel: ${carData.model} \ncena: ${carData.price}`}
+      : { msg: `Nie udało się zaktualizować samochodu o id: ${id}`};
+  }
+
+  private mapEntityToCar(entity: Cars): Car {
+    const { id, brand, model, price, image, isRented, fuelType } = entity;
+
+    return {
+      id,
+      brand,
+      model,
+      price,
+      image: this.normalizeImagePath(image),
+      isRented: isRented ?? undefined,
+      fuelType: fuelType ?? undefined,
+    };
+  }
+
+  private normalizeImagePath(image?: string | null): string | undefined {
+    if (!image) {
+      return undefined;
+    }
+
+    const trimmed = image.trim();
+
+    if (!trimmed) {
+      return undefined;
+    }
+
+    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:')) {
+      return trimmed;
+    }
+
+    const cleaned = trimmed.replace(/\\/g, '/').replace(/^[\\/]+/, '');
+
+    return cleaned.startsWith('carsImages/')
+      ? cleaned
+      : `carsImages/${cleaned}`;
   }
 }
