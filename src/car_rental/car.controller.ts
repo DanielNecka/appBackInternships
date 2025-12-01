@@ -19,6 +19,12 @@ import { diskStorage } from 'multer';
 import type { Request } from 'express';
 import * as path from 'path';
 import * as fs from 'fs';
+import {
+  IMAGES_DIRECTORY,
+  RELATIVE_IMAGE_PREFIX,
+  ensureImagesDirectory,
+  normalizeImageStoragePath,
+} from './image.constants';
 
 type RequestWithBody = Request & { body: Record<string, unknown> };
 
@@ -32,15 +38,6 @@ type StoredImageFile = {
 type IncomingImageFile = {
   originalname: string;
 };
-
-const IMAGES_DIRECTORY = path.resolve(process.cwd(), '..', 'app-front', 'public', 'carsImages');
-const RELATIVE_IMAGE_PREFIX = 'carsImages';
-
-function ensureImagesDirectory(): void {
-  if (!fs.existsSync(IMAGES_DIRECTORY)) {
-    fs.mkdirSync(IMAGES_DIRECTORY, { recursive: true });
-  }
-}
 
 function sanitizeSegment(segment: string | undefined): string {
   return (segment ?? 'samochod')
@@ -157,19 +154,7 @@ export class CarController {
     const rawImagePath = image
       ? `${RELATIVE_IMAGE_PREFIX}/${image.filename}`
       : (carData.image as string | undefined);
-
-    const normalizedImagePath = rawImagePath
-      ? rawImagePath
-          .trim()
-          .replace(/\\/g, '/')
-          .replace(/^[\\/]+/, '')
-      : undefined;
-
-    const finalImagePath = normalizedImagePath
-      ? normalizedImagePath.startsWith(`${RELATIVE_IMAGE_PREFIX}/`)
-        ? normalizedImagePath
-        : `${RELATIVE_IMAGE_PREFIX}/${normalizedImagePath}`
-      : undefined;
+    const finalImagePath = normalizeImageStoragePath(rawImagePath);
 
     const normalizedCar: Car = {
       brand: (carData.brand as string)?.trim() ?? '',

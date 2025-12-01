@@ -1,13 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, FindOptionsWhere, ILike, LessThan, MoreThan, Repository } from 'typeorm';
 import { Cars } from 'src/entity/cars.entity';
 import { Car } from '../models/car.model';
 import { ApiError } from '../models/error.model';
 import { CarSearch } from '../models/carSearch.model';
+import { buildPublicImageUrl, normalizeImageStoragePath, resolveImageAbsolutePath } from './image.constants';
+import { promises as fsPromises } from 'fs';
 
 @Injectable()
 export class CarService {
+  private readonly logger = new Logger(CarService.name);
+
   constructor(
   @InjectRepository(Cars) 
     private carsRepository: Repository<Cars>
@@ -58,11 +62,21 @@ export class CarService {
   }
 
   async deleteCarById(id: number): Promise<string> {
+    const carToDelete = await this.carsRepository.findOne({ where: { id } });
+
+    if (!carToDelete) {
+      return `Samochód o id ${id} nie istnieje`;
+    }
+
     const result = await this.carsRepository.delete(id);
 
-    return result.affected 
-      ? `Samochód o id ${id} został usunięty` 
-      : `Samochód o id ${id} nie istnieje`
+    if (!result.affected) {
+      return `Samochód o id ${id} nie istnieje`;
+    }
+
+    await this.deleteImageFile(carToDelete.image);
+
+    return `Samochód o id ${id} został usunięty`;
   }
 
   async addCar(carData: Car): Promise<ApiError | { msg: string; addedCar: Car }> {
@@ -70,7 +84,7 @@ export class CarService {
       brand: carData.brand,
       model: carData.model,
       price: carData.price,
-      image: carData.image,
+      image: normalizeImageStoragePath(carData.image),
       isRented: carData.isRented,
       fuelType: carData.fuelType,
     });
@@ -101,37 +115,34 @@ export class CarService {
 
   private mapEntityToCar(entity: Cars): Car {
     const { id, brand, model, price, image, isRented, fuelType } = entity;
+    const publicImageUrl = buildPublicImageUrl(image);
 
     return {
       id,
       brand,
       model,
       price,
-      image: this.normalizeImagePath(image),
+      image: publicImageUrl,
       isRented: isRented ?? undefined,
       fuelType: fuelType ?? undefined,
     };
   }
 
-  private normalizeImagePath(image?: string | null): string | undefined {
-    if (!image) {
-      return undefined;
+  private async deleteImageFile(image?: string | null): Promise<void> {
+    const absolutePath = resolveImageAbsolutePath(image);
+
+    if (!absolutePath) {
+      return;
     }
 
-    const trimmed = image.trim();
+    try {
+      await fsPromises.unlink(absolutePath);
+    } catch (error) {
+      const err = error as NodeJS.ErrnoException;
 
-    if (!trimmed) {
-      return undefined;
+      if (err.code !== 'ENOENT') {
+        this.logger.warn(`Nie udało się usunąć pliku ${absolutePath}: ${err.message}`);
+      }
     }
-
-    if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:')) {
-      return trimmed;
-    }
-
-    const cleaned = trimmed.replace(/\\/g, '/').replace(/^[\\/]+/, '');
-
-    return cleaned.startsWith('carsImages/')
-      ? cleaned
-      : `carsImages/${cleaned}`;
   }
 }
