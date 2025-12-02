@@ -113,6 +113,7 @@ export class CarService {
       model: carData.model,
       price: carData.price,
       fuelType: carData.fuelType,
+      isRented: carData.isRented ?? false,
     });
 
     return result.affected
