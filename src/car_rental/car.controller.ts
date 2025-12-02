@@ -18,13 +18,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import type { Request } from 'express';
 import * as path from 'path';
-import * as fs from 'fs';
-import {
-  IMAGES_DIRECTORY,
-  RELATIVE_IMAGE_PREFIX,
-  ensureImagesDirectory,
-  normalizeImageStoragePath,
-} from './image.constants';
+import { IMAGE_DIR_NAME, IMAGE_DIR_PATH, imagePath } from './image.constants';
 
 type RequestWithBody = Request & { body: Record<string, unknown> };
 
@@ -35,71 +29,32 @@ type StoredImageFile = {
   size?: number;
 };
 
-type IncomingImageFile = {
-  originalname: string;
-};
-
-function sanitizeSegment(segment: string | undefined): string {
-  return (segment ?? 'samochod')
-    .toString()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+function generateImageName(req: RequestWithBody, file: { originalname?: string }): string {
+  const rawBrand = (req.body.brand as string | undefined)?.trim() || 'samochod';
+  const rawModel = (req.body.model as string | undefined)?.trim() || '';
+  const base = [rawBrand, rawModel]
+    .filter(Boolean)
+    .join('-')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     || 'samochod';
-}
 
-function normalizeForComparison(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
-}
+  const ext = path.extname(file.originalname ?? '').toLowerCase() || '.png';
+  const uniqueSuffix = Date.now().toString(36);
 
-function nextImageIndex(baseName: string): number {
-  ensureImagesDirectory();
-  const files = fs.readdirSync(IMAGES_DIRECTORY);
-  const normalizedBase = normalizeForComparison(baseName);
+  imagePath(undefined, 'ensure');
 
-  const indices = files
-    .map((fileName) => {
-      const parsedName = path.parse(fileName).name;
-      const match = parsedName.match(/-(\d+)$/);
-      const candidateBase = match ? parsedName.slice(0, -match[0].length) : parsedName;
-      const normalizedCandidate = normalizeForComparison(candidateBase);
-
-      if (normalizedCandidate !== normalizedBase) {
-        return null;
-      }
-
-      if (!match) {
-        return 0;
-      }
-
-      const parsedIndex = Number.parseInt(match[1], 10);
-      return Number.isNaN(parsedIndex) ? 0 : parsedIndex;
-    })
-    .filter((value): value is number => value !== null);
-
-  const currentMax = indices.length ? Math.max(...indices) : 0;
-  return currentMax + 1;
-}
-
-function generateImageName(req: RequestWithBody, file: IncomingImageFile): string {
-  const brand = sanitizeSegment(req.body.brand as string | undefined);
-  const model = sanitizeSegment(req.body.model as string | undefined);
-  const baseName = [brand, model].filter(Boolean).join('-') || 'samochod';
-  const ext = path.extname(file.originalname)?.toLowerCase() || '.png';
-  const index = nextImageIndex(baseName);
-
-  return `${baseName}-${index}${ext}`;
+  return `${base}-${uniqueSuffix}${ext}`;
 }
 
 const imageStorage = diskStorage({
   destination: (_req, _file, callback) => {
-    ensureImagesDirectory();
-    callback(null, IMAGES_DIRECTORY);
+    imagePath(undefined, 'ensure');
+    callback(null, IMAGE_DIR_PATH);
   },
   filename: (req, file, callback) => {
-    const filename = generateImageName(req as RequestWithBody, file as IncomingImageFile);
+    const filename = generateImageName(req as RequestWithBody, file);
     callback(null, filename);
   },
 });
@@ -152,9 +107,9 @@ export class CarController {
   ): Promise<ApiError | { msg: string; addedCar: Car }> {
     const price = Number(carData.price);
     const rawImagePath = image
-      ? `${RELATIVE_IMAGE_PREFIX}/${image.filename}`
+      ? `${IMAGE_DIR_NAME}/${image.filename}`
       : (carData.image as string | undefined);
-    const finalImagePath = normalizeImageStoragePath(rawImagePath);
+    const finalImagePath = imagePath(rawImagePath);
 
     const normalizedCar: Car = {
       brand: (carData.brand as string)?.trim() ?? '',
