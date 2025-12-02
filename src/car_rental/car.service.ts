@@ -43,27 +43,29 @@ export class CarService {
   }
 
   async searchCars(carData: CarSearch, sortType: 'ASC' | 'DESC'): Promise<Car[] | ApiError> {
-    const where: FindOptionsWhere<Cars> = {};
+    const where: any = {};
 
     carData.brand
       ? where.brand = ILike(`%${carData.brand}%`) : null;
+
     carData.model
       ? where.model = ILike(`%${carData.model}%`) : null;
+
     carData.price
       ? where.price = carData.price : null;
+
     carData.maxPrice
       ? where.price = LessThan(carData.maxPrice) : null;
+
     carData.minPrice
       ? where.price = MoreThan(carData.minPrice) : null;
-    carData.minPrice && carData.maxPrice
-      ? where.price = Between(carData.minPrice, carData.maxPrice) : null;
-    carData.isRedted
-      ? (where.isRented = true) : null;
+
+    where.isRented = carData.isRented;
 
     const cars = await this.carsRepository.find({
       where,
       order: {
-        price: sortType,
+        id: sortType,
       },
     });
 
@@ -99,8 +101,7 @@ export class CarService {
   return savedCar ? { msg: `Pomyślnie dodano samochód ${savedCar.brand} ${savedCar.model} z ceną ${savedCar.price} zł/h.`, addedCar: savedCar }
     : { msg: `Błąd dodania samochodu ${carData.brand}, ${carData.model}`};
   }
-
-
+  
   async updateCarData(id: number, carData: Car): Promise<ApiError> {
     const currentCar = await this.findCarById(id);
 

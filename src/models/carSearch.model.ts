@@ -1,7 +1,10 @@
-import { Car } from '../models/car.model';
-
-export interface CarSearch extends Car {
+export interface CarSearch {
+    brand?: string;
+    model?: string;
+    price?: number;
     maxPrice?: number;
     minPrice?: number;
-    isRedted?: boolean;
+    isRented?: number;
+    isNotRented?: number;
+    fuelType?: string;
 }
