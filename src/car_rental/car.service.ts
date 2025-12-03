@@ -43,7 +43,7 @@ export class CarService {
   }
 
   async searchCars(carData: CarSearch, sortType: 'ASC' | 'DESC'): Promise<Car[] | ApiError> {
-    const where: any = {};
+    const where: FindOptionsWhere<any> = {};
 
     carData.brand
       ? where.brand = ILike(`%${carData.brand}%`) : null;
