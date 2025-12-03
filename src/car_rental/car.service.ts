@@ -51,14 +51,14 @@ export class CarService {
     carData.model
       ? where.model = ILike(`%${carData.model}%`) : null;
 
-    carData.price
-      ? where.price = carData.price : null;
-
     carData.maxPrice
       ? where.price = LessThan(carData.maxPrice) : null;
 
     carData.minPrice
       ? where.price = MoreThan(carData.minPrice) : null;
+
+    carData.minPrice && carData.maxPrice
+      ? where.price = Between(carData.minPrice, carData.maxPrice) : null;
 
     where.isRented = carData.isRented;
 

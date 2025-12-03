@@ -5,6 +5,5 @@ export interface CarSearch {
     maxPrice?: number;
     minPrice?: number;
     isRented?: number;
-    isNotRented?: number;
     fuelType?: string;
 }
