@@ -5,6 +5,10 @@ import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CarModule } from './car_rental/car.module'
 import * as path from 'path';
+import { Users } from './entity/users.entity';
+import { UserModule } from './user/user.module';
+import { Cars } from './entity/cars.entity';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -19,9 +23,11 @@ import * as path from 'path';
       username: 'root',
       password: '',
       database: 'car_rental',
-      entities: [__dirname + '/**/*.entity{.ts,.js}']
+      entities: [Cars, Users]
     }),
-    CarModule
+    CarModule,
+    UserModule,
+    AuthModule
   ],
   controllers: [AppController],
   providers: [AppService],
