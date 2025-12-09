@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  ParseIntPipe,
-  Patch,
-  Post,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body,Controller, Delete, Get, Param, ParseIntPipe, Patch, Post, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CarService } from './car.service';
 import type { Car } from '../models/car.model';
 import type { CarSearch } from '../models/carSearch.model';
@@ -19,6 +8,8 @@ import { diskStorage } from 'multer';
 import type { Request } from 'express';
 import * as path from 'path';
 import { IMAGE_DIR_NAME, IMAGE_DIR_PATH, imagePath } from './image.constants';
+import { AuthGuard } from '@nestjs/passport';
+import { JwtAuthGuard } from 'src/auth/jwt.guard';
 
 type RequestWithBody = Request & { body: Record<string, unknown> };
 
@@ -80,26 +71,31 @@ export class CarController {
   constructor(private readonly carService: CarService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAllCars(): Promise<Car[] | ApiError> {
     return this.carService.findAllCars();
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   findCarById(@Param('id', ParseIntPipe) id: number): Promise<Car | ApiError> {
     return this.carService.findCarById(id);
   }
 
   @Post('search')
+  @UseGuards(JwtAuthGuard)
   searchCars(@Body() carData: CarSearch): Promise<Car[] | ApiError> {
     return this.carService.searchCars(carData, 'ASC');
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   deleteCarById(@Param('id', ParseIntPipe) id: number): Promise<string> {
     return this.carService.deleteCarById(id);
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('image', { storage: imageStorage }))
   addCar(
     @UploadedFile() image: StoredImageFile | undefined,
@@ -124,6 +120,7 @@ export class CarController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   updateCarData(@Param('id', ParseIntPipe) id: number, @Body() carData: Car): Promise<ApiError> {
     return this.carService.updateCarData(id, carData);
   }

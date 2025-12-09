@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { createHash } from 'crypto';
 import { Users } from 'src/entity/users.entity';
@@ -16,18 +16,9 @@ export class UserService {
     return this.userRepository.find();
   }
 
-  loginUser(data: {login: string, password: string}): Promise<User | null> {
-    const passwordSha1 = createHash('sha1').update(data.password).digest('hex');
-
+  loginUser(login: string): Promise<User | null> {
     return this.userRepository.findOne({
-      select: {
-        id: true,
-        login: true
-      },
-      where: {
-        login: data.login,
-        password: passwordSha1
-      }
+      where: { login }
     });
   }
 }

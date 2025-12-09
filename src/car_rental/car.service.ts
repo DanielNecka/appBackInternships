@@ -14,11 +14,11 @@ export class CarService {
     private carsRepository: Repository<Cars>
   ) { }
 
-  async findAllCars(): Promise<Car[] | ApiError> {
+  async findAllCars(): Promise<Car[]> {
     const cars = await this.carsRepository.find({ order: { id: 'DESC' } });
 
     if (!cars) {
-      return { msg: 'Błąd pobrania samochodów' };
+      throw new Error('Cars data not found.');
     }
 
     return cars;
@@ -28,7 +28,7 @@ export class CarService {
     const car = await this.carsRepository.findOneBy({ id });
 
     if (!car) {
-      return { msg: `Błąd pobrania samochodu o id: ${id}` };
+      throw new Error('Car data not found.')
     }
 
     return {
@@ -37,8 +37,8 @@ export class CarService {
       model: car.model,
       price: car.price,
       image: imagePath(car.image, 'public'),
-      isRented: car.isRented ?? undefined,
-      fuelType: car.fuelType ?? undefined,
+      isRented: car.isRented,
+      fuelType: car.fuelType,
     };
   }
 
@@ -70,7 +70,7 @@ export class CarService {
     });
 
     if (!cars) {
-      return { msg: 'Nie znaleziono samochodu o danych kryteriach' };
+      throw new Error('Cars data not found.');
     }
 
     return cars;
@@ -80,13 +80,13 @@ export class CarService {
     const carToDelete = await this.carsRepository.findOne({ where: { id } });
 
     if (!carToDelete) {
-      return `Samochód o id ${id} nie istnieje`;
+      throw new Error('Car data not found.');
     }
 
     const result = await this.carsRepository.delete(id);
 
     if (!result.affected) {
-      return `Samochód o id ${id} nie istnieje`;
+      throw new Error('Car data not found.')
     }
 
     return `Samochód o id ${id} został usunięty`;
@@ -98,8 +98,11 @@ export class CarService {
       image: imagePath(carData.image)
     });
 
-  return savedCar ? { msg: `Pomyślnie dodano samochód ${savedCar.brand} ${savedCar.model} z ceną ${savedCar.price} zł/h.`, addedCar: savedCar }
-    : { msg: `Błąd dodania samochodu ${carData.brand}, ${carData.model}`};
+    if (!savedCar) {
+      throw new Error('Error when adding car')
+    }
+
+    return { msg: `Pomyślnie dodano samochód ${savedCar.brand} ${savedCar.model} z ceną ${savedCar.price} zł/h.`, addedCar: savedCar };
   }
   
   async updateCarData(id: number, carData: Car): Promise<ApiError> {
@@ -114,11 +117,13 @@ export class CarService {
       model: carData.model,
       price: carData.price,
       fuelType: carData.fuelType,
-      isRented: carData.isRented ?? false,
+      isRented: carData.isRented,
     });
 
-    return result.affected
-      ? { msg: `Pomyślnie zaktualizowano samochód o id: ${id}\n\nStare dane: \nmarka: ${currentCar.brand} \nmodel: ${currentCar.model} \ncena: ${currentCar.price}\n\nNowe dane: \nmarka: ${carData.brand} \nmodel: ${carData.model} \ncena: ${carData.price}` }
-      : { msg: `Nie udało się zaktualizować samochodu o id: ${id}` };
+    if (!result.affected) {
+      throw new Error('Error when modyfing car')
+    }
+
+    return { msg: `Pomyślnie zaktualizowano samochód o id: ${id}\n\nStare dane: \nmarka: ${currentCar.brand} \nmodel: ${currentCar.model} \ncena: ${currentCar.price}\n\nNowe dane: \nmarka: ${carData.brand} \nmodel: ${carData.model} \ncena: ${carData.price}` }
   }
 }
