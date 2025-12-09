@@ -1,12 +1,11 @@
-import { Injectable, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UserModule } from 'src/user/user.module';
 import { PassportModule } from '@nestjs/passport';
-import { JwtModule, JwtModuleOptions, JwtOptionsFactory } from '@nestjs/jwt';
+import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import type { StringValue } from 'ms';
+import { ConfigModule } from '@nestjs/config';
 import { JwtConfigService } from './jwt.config';
 
 @Module({
