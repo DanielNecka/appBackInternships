@@ -7,21 +7,7 @@ import { JwtModule, JwtModuleOptions, JwtOptionsFactory } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import type { StringValue } from 'ms';
-
-@Injectable()
-class JwtConfigService implements JwtOptionsFactory {
-  constructor(private readonly configService: ConfigService) {}
-
-  createJwtOptions(): JwtModuleOptions {
-    return {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      signOptions: {
-        expiresIn:
-          this.configService.get<StringValue>('JWT_EXPIRIES')
-      }
-    };
-  }
-}
+import { JwtConfigService } from './jwt.config';
 
 @Module({
   imports: [
